@@ -91,4 +91,6 @@ unsigned long prev_update_time;
  *******************************************************************************/
 bool setup_end = false;
 
+bool button_state_[2] = {false, false};
+
 #endif  // TURTLEBOT3_MECANUM_CORE_CONFIG_H_

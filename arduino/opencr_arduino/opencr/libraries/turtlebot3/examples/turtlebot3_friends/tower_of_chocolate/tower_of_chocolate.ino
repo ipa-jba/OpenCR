@@ -46,6 +46,9 @@ void setup()
   pinMode(LED_WORKING_CHECK, OUTPUT);
   pinMode(BDPIN_LED_USER_3, OUTPUT);
 
+  pinMode(BDPIN_PUSH_SW_1, INPUT);
+  pinMode(BDPIN_PUSH_SW_2, INPUT);
+
   // SerialBT2.begin(57600);
   setup_end = true;
 }
@@ -66,6 +69,30 @@ void loop()
 
   // Call all the callbacks waiting to be called at that point in time
   nh.spinOnce();
+
+  if (!button_state_[0] && digitalRead(BDPIN_PUSH_SW_1))
+  {
+    button_state_[1] = true;
+    std_msgs::Bool msg;
+    msg.data = true;
+    dispenseTower1Callback(msg);
+  }
+  else
+  {
+    button_state_[0] = digitalRead(BDPIN_PUSH_SW_1);
+  }
+
+  if (!button_state_[1] && digitalRead(BDPIN_PUSH_SW_2))
+  {
+    button_state_[1] = true;
+    std_msgs::Bool msg;
+    msg.data = true;
+    dispenseTower2Callback(msg);
+  }
+  else
+  {
+    button_state_[1] = digitalRead(BDPIN_PUSH_SW_2);
+  }
 
   // give the serial link time to process
   delay(10);

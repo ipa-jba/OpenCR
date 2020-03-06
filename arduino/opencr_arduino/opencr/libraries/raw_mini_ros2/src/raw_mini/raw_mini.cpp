@@ -264,18 +264,18 @@ void RawMiniCore::begin(const char* model_name)
   dxl_slave.addControlItem(ADDR_ORIENTATION_Y, control_items.orientation[2]);
   dxl_slave.addControlItem(ADDR_ORIENTATION_Z, control_items.orientation[3]);
   // Items to check status of motors
-  dxl_slave.addControlItem(ADDR_PRESENT_CURRENT_FL, control_items.present_position[MotorLocation::FRONT_LEFT]);
-  dxl_slave.addControlItem(ADDR_PRESENT_CURRENT_FR, control_items.present_position[MotorLocation::FRONT_RIGHT]);
-  dxl_slave.addControlItem(ADDR_PRESENT_CURRENT_RL, control_items.present_position[MotorLocation::REAR_LEFT]);
-  dxl_slave.addControlItem(ADDR_PRESENT_CURRENT_RR, control_items.present_position[MotorLocation::REAR_RIGHT]);
+  dxl_slave.addControlItem(ADDR_PRESENT_CURRENT_FL, control_items.present_current[MotorLocation::FRONT_LEFT]);
+  dxl_slave.addControlItem(ADDR_PRESENT_CURRENT_FR, control_items.present_current[MotorLocation::FRONT_RIGHT]);
+  dxl_slave.addControlItem(ADDR_PRESENT_CURRENT_RL, control_items.present_current[MotorLocation::REAR_LEFT]);
+  dxl_slave.addControlItem(ADDR_PRESENT_CURRENT_RR, control_items.present_current[MotorLocation::REAR_RIGHT]);
   dxl_slave.addControlItem(ADDR_PRESENT_VELOCITY_FL, control_items.present_velocity[MotorLocation::FRONT_LEFT]);
   dxl_slave.addControlItem(ADDR_PRESENT_VELOCITY_FR, control_items.present_velocity[MotorLocation::FRONT_RIGHT]);
   dxl_slave.addControlItem(ADDR_PRESENT_VELOCITY_RL, control_items.present_velocity[MotorLocation::REAR_LEFT]);
   dxl_slave.addControlItem(ADDR_PRESENT_VELOCITY_RR, control_items.present_velocity[MotorLocation::REAR_RIGHT]);
-  dxl_slave.addControlItem(ADDR_PRESENT_POSITION_FL, control_items.present_current[MotorLocation::FRONT_LEFT]);
-  dxl_slave.addControlItem(ADDR_PRESENT_POSITION_FR, control_items.present_current[MotorLocation::FRONT_RIGHT]);
-  dxl_slave.addControlItem(ADDR_PRESENT_POSITION_RL, control_items.present_current[MotorLocation::REAR_LEFT]);
-  dxl_slave.addControlItem(ADDR_PRESENT_POSITION_RR, control_items.present_current[MotorLocation::REAR_RIGHT]);
+  dxl_slave.addControlItem(ADDR_PRESENT_POSITION_FL, control_items.present_position[MotorLocation::FRONT_LEFT]);
+  dxl_slave.addControlItem(ADDR_PRESENT_POSITION_FR, control_items.present_position[MotorLocation::FRONT_RIGHT]);
+  dxl_slave.addControlItem(ADDR_PRESENT_POSITION_RL, control_items.present_position[MotorLocation::REAR_LEFT]);
+  dxl_slave.addControlItem(ADDR_PRESENT_POSITION_RR, control_items.present_position[MotorLocation::REAR_RIGHT]);
   // Items to control motors
   dxl_slave.addControlItem(ADDR_MOTOR_TORQUE, control_items.motor_torque_enable_state);
 
@@ -369,15 +369,6 @@ void RawMiniCore::run()
                                   goal_velocity[MotorLocation::REAR_RIGHT]);
     }
   }
-}
-
-/*******************************************************************************
- * Function definition for updating velocity values
- * to be used for control of DYNAMIXEL(motors).
- *******************************************************************************/
-void update_goal_velocity_from_3values(void)
-{
-  sensors.setLedPattern(goal_velocity[VelocityType::LINEAR_X], goal_velocity[VelocityType::ANGULAR_Z]);
 }
 
 /*******************************************************************************
@@ -482,7 +473,7 @@ void update_imu(uint32_t interval_ms)
 void update_motor_status(uint32_t interval_ms)
 {
   static uint32_t pre_time;
-  int16_t current_fl, current_fr, current_rl, current_rr;
+  int32_t current_fl, current_fr, current_rl, current_rr;
 
   if (millis() - pre_time >= interval_ms)
   {
@@ -498,12 +489,12 @@ void update_motor_status(uint32_t interval_ms)
                                          control_items.present_velocity[MotorLocation::FRONT_RIGHT],
                                          control_items.present_velocity[MotorLocation::REAR_LEFT],
                                          control_items.present_velocity[MotorLocation::REAR_RIGHT]);
-      if (motor_driver.read_present_current(current_fl, current_fr, current_rl, current_rr) == true)
+      if (motor_driver.read_present_goal_vel(current_fl, current_fr, current_rl, current_rr) == true)
       {
-        control_items.present_current[MotorLocation::FRONT_LEFT] = current_fl;
-        control_items.present_current[MotorLocation::FRONT_RIGHT] = current_fr;
-        control_items.present_current[MotorLocation::REAR_LEFT] = current_rl;
-        control_items.present_current[MotorLocation::REAR_RIGHT] = current_rr;
+        control_items.present_current[MotorLocation::FRONT_LEFT] = 100 * current_fl;
+        control_items.present_current[MotorLocation::FRONT_RIGHT] = 100 * current_fr;
+        control_items.present_current[MotorLocation::REAR_LEFT] = 100 * current_rl;
+        control_items.present_current[MotorLocation::REAR_RIGHT] = 100 * current_rr;
       }
 
       control_items.motor_torque_enable_state = motor_driver.get_torque();
@@ -544,21 +535,21 @@ static void dxl_slave_write_callback_func(uint16_t item_addr, uint8_t& dxl_err_c
 
     case ADDR_CMD_VEL_FRONT_LEFT:
       goal_velocity[MotorLocation::FRONT_LEFT] =
-          constrain((float)(control_items.cmd_vel_rot[MotorLocation::FRONT_LEFT]), -max_rot_vel, max_rot_vel);
+          constrain((float)(control_items.cmd_vel_rot[MotorLocation::FRONT_LEFT]) * 1e-4, -max_rot_vel, max_rot_vel);
       break;
 
     case ADDR_CMD_VEL_FRONT_RIGHT:
       goal_velocity[MotorLocation::FRONT_RIGHT] =
-          constrain((float)(control_items.cmd_vel_rot[MotorLocation::FRONT_RIGHT]), -max_rot_vel, max_rot_vel);
+          constrain((float)(control_items.cmd_vel_rot[MotorLocation::FRONT_RIGHT]) * 1e-4, -max_rot_vel, max_rot_vel);
       break;
     case ADDR_CMD_VEL_REAR_LEFT:
       goal_velocity[MotorLocation::REAR_LEFT] =
-          constrain((float)(control_items.cmd_vel_rot[MotorLocation::REAR_LEFT]), -max_rot_vel, max_rot_vel);
+          constrain((float)(control_items.cmd_vel_rot[MotorLocation::REAR_LEFT]) * 1e-4, -max_rot_vel, max_rot_vel);
       break;
 
     case ADDR_CMD_VEL_REAR_RIGHT:
       goal_velocity[MotorLocation::REAR_RIGHT] =
-          constrain((float)(control_items.cmd_vel_rot[MotorLocation::REAR_RIGHT]), -max_rot_vel, max_rot_vel);
+          constrain((float)(control_items.cmd_vel_rot[MotorLocation::REAR_RIGHT]) * 1e-4, -max_rot_vel, max_rot_vel);
       break;
 
     case ADDR_PROFILE_ACC_FL:

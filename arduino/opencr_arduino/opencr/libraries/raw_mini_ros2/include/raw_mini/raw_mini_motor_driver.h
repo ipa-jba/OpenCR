@@ -28,14 +28,6 @@ enum MotorLocation
   MOTOR_NUM_MAX
 };
 
-enum VelocityType
-{
-  LINEAR_X = 0,
-  LINEAR_Y = 1,
-  ANGULAR_Z = 2,
-  TYPE_NUM_MAX
-};
-
 class RawMiniMotorDriver
 {
 public:
@@ -50,6 +42,8 @@ public:
   bool set_torque(bool onoff);
   bool get_torque();
 
+  bool set_led(bool front_left, bool front_right, bool rear_left, bool rear_right);
+
   bool read_present_position(int32_t& front_left_value,
                              int32_t& front_right_value,
                              int32_t& rear_left_value,
@@ -62,6 +56,11 @@ public:
                             int16_t& front_right_value,
                             int16_t& rear_left_value,
                             int16_t& rear_right_value);
+
+  bool read_present_goal_vel(int32_t& front_left_value,
+                             int32_t& front_right_value,
+                             int32_t& rear_left_value,
+                             int32_t& rear_right_value);
   bool read_profile_acceleration(uint32_t& front_left_value,
                                  uint32_t& front_right_value,
                                  uint32_t& rear_left_value,

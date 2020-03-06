@@ -24,7 +24,8 @@ const uint16_t LIMIT_X_MAX_VELOCITY = 337;
 //           = 0.033 * (0.229 * Goal_Velocity) * 0.10472
 // Goal_Velocity = V * 1263.632956882
 const float VELOCITY_CONSTANT_VALUE = 1263.632956882;
-
+const float RAD2VEL = 41.6999850896;
+const float TICK2RAD = 0.001533981;
 /* DYNAMIXEL Information for controlling motors and  */
 const uint8_t DXL_MOTOR_ID_FRONT_LEFT = 1;    // ID of front left motor
 const uint8_t DXL_MOTOR_ID_FRONT_RIGHT = 2;   // ID of front right motor
@@ -104,6 +105,25 @@ bool RawMiniMotorDriver::set_torque(bool onoff)
   {
     ret = true;
     torque_ = onoff;
+  }
+
+  return ret;
+}
+
+bool RawMiniMotorDriver::set_led(bool front_left, bool front_right, bool rear_left, bool rear_right)
+{
+  bool ret = false;
+
+  sync_write_param.addr = 65;
+  sync_write_param.length = 1;
+  sync_write_param.xel[FRONT_LEFT].data[0] = front_left;
+  sync_write_param.xel[FRONT_RIGHT].data[0] = front_right;
+  sync_write_param.xel[REAR_LEFT].data[0] = rear_left;
+  sync_write_param.xel[REAR_RIGHT].data[0] = rear_right;
+
+  if (dxl.syncWrite(sync_write_param) == true)
+  {
+    ret = true;
   }
 
   return ret;
@@ -198,6 +218,28 @@ bool RawMiniMotorDriver::read_present_current(int16_t& front_left_value,
   return ret;
 }
 
+bool RawMiniMotorDriver::read_present_goal_vel(int32_t& front_left_value,
+                                               int32_t& front_right_value,
+                                               int32_t& rear_left_value,
+                                               int32_t& rear_right_value)
+{
+  bool ret = false;
+
+  sync_read_param.addr = 104;
+  sync_read_param.length = 4;
+
+  if (dxl.syncRead(sync_read_param, read_result))
+  {
+    memcpy(&front_left_value, read_result.xel[FRONT_LEFT].data, read_result.xel[FRONT_LEFT].length);
+    memcpy(&front_right_value, read_result.xel[FRONT_RIGHT].data, read_result.xel[FRONT_RIGHT].length);
+    memcpy(&rear_left_value, read_result.xel[REAR_LEFT].data, read_result.xel[REAR_LEFT].length);
+    memcpy(&rear_right_value, read_result.xel[REAR_RIGHT].data, read_result.xel[REAR_RIGHT].length);
+    ret = true;
+  }
+
+  return ret;
+}
+
 bool RawMiniMotorDriver::read_profile_acceleration(uint32_t& front_left_value,
                                                    uint32_t& front_right_value,
                                                    uint32_t& rear_left_value,
@@ -226,6 +268,7 @@ bool RawMiniMotorDriver::write_velocity(int32_t front_left_value,
                                         int32_t rear_right_value)
 {
   bool ret = false;
+  set_led(front_left_value > 0, front_right_value > 0, rear_left_value > 0, rear_right_value > 0);
 
   sync_write_param.addr = 104;
   sync_write_param.length = 4;
@@ -269,25 +312,15 @@ bool RawMiniMotorDriver::control_motors(float front_left_command,
                                         float rear_left_command,
                                         float rear_right_command)
 {
-  bool dxl_comm_result = false;
-
   float wheel_velocity[MotorLocation::MOTOR_NUM_MAX];
 
-  wheel_velocity[FRONT_LEFT] =
-      constrain(front_left_command * VELOCITY_CONSTANT_VALUE, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
-  wheel_velocity[FRONT_RIGHT] =
-      constrain(front_right_command * VELOCITY_CONSTANT_VALUE, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
-  wheel_velocity[REAR_LEFT] =
-      constrain(rear_left_command * VELOCITY_CONSTANT_VALUE, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
-  wheel_velocity[REAR_RIGHT] =
-      constrain(rear_right_command * VELOCITY_CONSTANT_VALUE, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
+  wheel_velocity[FRONT_LEFT] = constrain(front_left_command * RAD2VEL, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
+  wheel_velocity[FRONT_RIGHT] = constrain(front_right_command * RAD2VEL, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
+  wheel_velocity[REAR_LEFT] = constrain(rear_left_command * RAD2VEL, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
+  wheel_velocity[REAR_RIGHT] = constrain(rear_right_command * RAD2VEL, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
 
-  dxl_comm_result = write_velocity((int32_t)wheel_velocity[FRONT_LEFT],
-                                   (int32_t)wheel_velocity[FRONT_RIGHT],
-                                   (int32_t)wheel_velocity[REAR_LEFT],
-                                   (int32_t)wheel_velocity[REAR_RIGHT]);
-  if (dxl_comm_result == false)
-    return false;
-
-  return true;
+  return write_velocity((int32_t)wheel_velocity[FRONT_LEFT],
+                        (int32_t)wheel_velocity[FRONT_RIGHT],
+                        (int32_t)wheel_velocity[REAR_LEFT],
+                        (int32_t)wheel_velocity[REAR_RIGHT]);
 }

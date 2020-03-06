@@ -26,12 +26,12 @@ const uint16_t LIMIT_X_MAX_VELOCITY = 337;
 const float VELOCITY_CONSTANT_VALUE = 1263.632956882;
 
 /* DYNAMIXEL Information for controlling motors and  */
-const uint8_t DXL_MOTOR_ID_FRONT_LEFT = 1;    // ID of left motor
-const uint8_t DXL_MOTOR_ID_FRONT_RIGHT = 2;   // ID of right motor
-const uint8_t DXL_MOTOR_ID_REAR_LEFT = 3;     // ID of left motor
-const uint8_t DXL_MOTOR_ID_REAR_RIGHT = 4;    // ID of right motor
+const uint8_t DXL_MOTOR_ID_FRONT_LEFT = 1;    // ID of front left motor
+const uint8_t DXL_MOTOR_ID_FRONT_RIGHT = 2;   // ID of front right motor
+const uint8_t DXL_MOTOR_ID_REAR_LEFT = 3;     // ID of rear left motor
+const uint8_t DXL_MOTOR_ID_REAR_RIGHT = 4;    // ID of rear right motor
 const float DXL_PORT_PROTOCOL_VERSION = 2.0;  // Dynamixel protocol version 2.0
-const uint32_t DXL_PORT_BAUDRATE = 576000;    // baurd rate of Dynamixel
+const uint32_t DXL_PORT_BAUDRATE = 1000000;   // baurd rate of Dynamixel
 const int OPENCR_DXL_DIR_PIN = 84;            // Arduino pin number of DYNAMIXEL direction pin on OpenCR.
 
 ParamForSyncReadInst_t sync_read_param;

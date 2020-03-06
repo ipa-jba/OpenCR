@@ -62,7 +62,7 @@ static Turtlebot3Diagnosis diagnosis;
  *******************************************************************************/
 #define SERIAL_DXL_SLAVE Serial
 const uint8_t ID_DXL_SLAVE = 200;
-const uint16_t MODEL_NUM_DXL_SLAVE = 0x5000;
+const uint16_t MODEL_NUM_DXL_SLAVE = 0x5042;
 const float PROTOCOL_VERSION_DXL_SLAVE = 2.0;
 const uint32_t HEARTBEAT_TIMEOUT_MS = 500;
 
@@ -84,7 +84,6 @@ DYNAMIXEL::Slave dxl_slave(port_dxl_slave, MODEL_NUM_DXL_SLAVE);
 
 enum ControlTableItemAddr
 {
-  ADDR_MODEL_INFORM = 2,
 
   ADDR_MILLIS = 10,
   ADDR_MICROS = 14,
@@ -201,7 +200,7 @@ void RawMiniCore::begin(const char* model_name)
   model_motor_rpm = 77;
 
   max_rot_vel = 2 * PI * model_motor_rpm / 60;
-
+  port_dxl_slave.begin();
   bool ret;
   (void)ret;
   DEBUG_SERIAL_BEGIN(57600);
@@ -223,7 +222,7 @@ void RawMiniCore::begin(const char* model_name)
   /* Add control items for Slave */
   // Items for model information of device
   control_items.model_inform = p_model_info->model_info;
-  dxl_slave.addControlItem(ADDR_MODEL_INFORM, control_items.model_inform);
+  // dxl_slave.addControlItem(ADDR_MODEL_INFORM, control_items.model_inform);
   // Items for Timer of device
   dxl_slave.addControlItem(ADDR_MILLIS, control_items.dev_time_millis);
   dxl_slave.addControlItem(ADDR_MICROS, control_items.dev_time_micros);
@@ -307,6 +306,7 @@ void RawMiniCore::begin(const char* model_name)
     DEBUG_PRINTLN("Can't communicate with the motor!");
     DEBUG_PRINTLN("  Please check the connection to the motor and the power supply.");
     DEBUG_PRINTLN();
+    return;
   }
 
   // Init IMU
@@ -520,10 +520,10 @@ static void dxl_slave_write_callback_func(uint16_t item_addr, uint8_t& dxl_err_c
 
   switch (item_addr)
   {
-    case ADDR_MODEL_INFORM:
-      control_items.model_inform = p_model_info->model_info;
-      // dxl_err_code = DXL_ERR_ACCESS;
-      break;
+      // case ADDR_MODEL_INFORM:
+      // control_items.model_inform = p_model_info->model_info;
+      // dxl_err_code = 0x07;
+      // break;
 
     case ADDR_SOUND:
       sensors.makeMelody(control_items.buzzer_sound);

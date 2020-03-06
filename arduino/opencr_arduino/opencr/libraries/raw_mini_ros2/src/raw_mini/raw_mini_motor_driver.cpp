@@ -24,7 +24,6 @@ const uint16_t LIMIT_X_MAX_VELOCITY = 337;
 //           = 0.033 * (0.229 * Goal_Velocity) * 0.10472
 // Goal_Velocity = V * 1263.632956882
 const float VELOCITY_CONSTANT_VALUE = 1263.632956882;
-const float RAD2VEL = 41.6999850896;
 const float TICK2RAD = 0.001533981;
 /* DYNAMIXEL Information for controlling motors and  */
 const uint8_t DXL_MOTOR_ID_FRONT_LEFT = 1;    // ID of front left motor
@@ -34,6 +33,11 @@ const uint8_t DXL_MOTOR_ID_REAR_RIGHT = 4;    // ID of rear right motor
 const float DXL_PORT_PROTOCOL_VERSION = 2.0;  // Dynamixel protocol version 2.0
 const uint32_t DXL_PORT_BAUDRATE = 1000000;   // baurd rate of Dynamixel
 const int OPENCR_DXL_DIR_PIN = 84;            // Arduino pin number of DYNAMIXEL direction pin on OpenCR.
+
+const float RPM_TO_RADS = 0.10471975499999982;
+const float DXL_RESOLUTION_RPM_PER_UNIT = 0.229;
+const float DXL_UNIT_TO_RADS = DXL_RESOLUTION_RPM_PER_UNIT * RPM_TO_RADS;
+const float RADS_TO_DXL_UNIT = 1.0 / DXL_UNIT_TO_RADS;
 
 ParamForSyncReadInst_t sync_read_param;
 ParamForSyncWriteInst_t sync_write_param;
@@ -174,23 +178,29 @@ bool RawMiniMotorDriver::read_present_position(int32_t& front_left_value,
   return ret;
 }
 
-bool RawMiniMotorDriver::read_present_velocity(int32_t& front_left_value,
-                                               int32_t& front_right_value,
-                                               int32_t& rear_left_value,
-                                               int32_t& rear_right_value)
+bool RawMiniMotorDriver::read_present_velocity(float& front_left_value,
+                                               float& front_right_value,
+                                               float& rear_left_value,
+                                               float& rear_right_value)
 {
   bool ret = false;
 
   sync_read_param.addr = 128;
   sync_read_param.length = 4;
 
+  int32_t dxl_units[MOTOR_NUM_MAX] = { 0, 0, 0, 0 };
   if (dxl.syncRead(sync_read_param, read_result))
   {
-    memcpy(&front_left_value, read_result.xel[FRONT_LEFT].data, read_result.xel[FRONT_LEFT].length);
-    memcpy(&front_right_value, read_result.xel[FRONT_RIGHT].data, read_result.xel[FRONT_RIGHT].length);
-    memcpy(&rear_left_value, read_result.xel[REAR_LEFT].data, read_result.xel[REAR_LEFT].length);
-    memcpy(&rear_right_value, read_result.xel[REAR_RIGHT].data, read_result.xel[REAR_RIGHT].length);
+    memcpy(&dxl_units[0], read_result.xel[FRONT_LEFT].data, read_result.xel[FRONT_LEFT].length);
+    memcpy(&dxl_units[1], read_result.xel[FRONT_RIGHT].data, read_result.xel[FRONT_RIGHT].length);
+    memcpy(&dxl_units[2], read_result.xel[REAR_LEFT].data, read_result.xel[REAR_LEFT].length);
+    memcpy(&dxl_units[3], read_result.xel[REAR_RIGHT].data, read_result.xel[REAR_RIGHT].length);
     ret = true;
+
+    front_left_value = dxl_units[0] * DXL_UNIT_TO_RADS;
+    front_right_value = dxl_units[1] * DXL_UNIT_TO_RADS;
+    rear_left_value = dxl_units[2] * DXL_UNIT_TO_RADS;
+    rear_right_value = dxl_units[3] * DXL_UNIT_TO_RADS;
   }
 
   return ret;
@@ -314,10 +324,14 @@ bool RawMiniMotorDriver::control_motors(float front_left_command,
 {
   float wheel_velocity[MotorLocation::MOTOR_NUM_MAX];
 
-  wheel_velocity[FRONT_LEFT] = constrain(front_left_command * RAD2VEL, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
-  wheel_velocity[FRONT_RIGHT] = constrain(front_right_command * RAD2VEL, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
-  wheel_velocity[REAR_LEFT] = constrain(rear_left_command * RAD2VEL, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
-  wheel_velocity[REAR_RIGHT] = constrain(rear_right_command * RAD2VEL, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
+  wheel_velocity[FRONT_LEFT] =
+      constrain(front_left_command * RADS_TO_DXL_UNIT, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
+  wheel_velocity[FRONT_RIGHT] =
+      constrain(front_right_command * RADS_TO_DXL_UNIT, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
+  wheel_velocity[REAR_LEFT] =
+      constrain(rear_left_command * RADS_TO_DXL_UNIT, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
+  wheel_velocity[REAR_RIGHT] =
+      constrain(rear_right_command * RADS_TO_DXL_UNIT, -LIMIT_X_MAX_VELOCITY, LIMIT_X_MAX_VELOCITY);
 
   return write_velocity((int32_t)wheel_velocity[FRONT_LEFT],
                         (int32_t)wheel_velocity[FRONT_RIGHT],

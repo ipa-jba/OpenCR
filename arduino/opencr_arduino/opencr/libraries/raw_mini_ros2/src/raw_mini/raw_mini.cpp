@@ -57,6 +57,9 @@ static Turtlebot3Sensor sensors;
  *******************************************************************************/
 static Turtlebot3Diagnosis diagnosis;
 
+const uint16_t FLOAT_TO_INT_PRECISION = 1e4;
+const float INT_TO_FLOAT_PRECISION = 1e-4;
+
 /*******************************************************************************
  * Declaration for DYNAMIXEL Slave Function
  *******************************************************************************/
@@ -473,7 +476,7 @@ void update_imu(uint32_t interval_ms)
 void update_motor_status(uint32_t interval_ms)
 {
   static uint32_t pre_time;
-  int32_t current_fl, current_fr, current_rl, current_rr;
+  int16_t current_fl, current_fr, current_rl, current_rr;
 
   if (millis() - pre_time >= interval_ms)
   {
@@ -485,11 +488,23 @@ void update_motor_status(uint32_t interval_ms)
                                          control_items.present_position[MotorLocation::FRONT_RIGHT],
                                          control_items.present_position[MotorLocation::REAR_LEFT],
                                          control_items.present_position[MotorLocation::REAR_RIGHT]);
-      motor_driver.read_present_velocity(control_items.present_velocity[MotorLocation::FRONT_LEFT],
-                                         control_items.present_velocity[MotorLocation::FRONT_RIGHT],
-                                         control_items.present_velocity[MotorLocation::REAR_LEFT],
-                                         control_items.present_velocity[MotorLocation::REAR_RIGHT]);
-      if (motor_driver.read_present_goal_vel(current_fl, current_fr, current_rl, current_rr) == true)
+
+      float vel_in_rads[MOTOR_NUM_MAX];
+      if (motor_driver.read_present_velocity(vel_in_rads[MotorLocation::FRONT_LEFT],
+                                             vel_in_rads[MotorLocation::FRONT_RIGHT],
+                                             vel_in_rads[MotorLocation::REAR_LEFT],
+                                             vel_in_rads[MotorLocation::REAR_RIGHT]))
+      {
+        control_items.present_velocity[MotorLocation::FRONT_LEFT] =
+            vel_in_rads[MotorLocation::FRONT_LEFT] * FLOAT_TO_INT_PRECISION;
+        control_items.present_velocity[MotorLocation::FRONT_RIGHT] =
+            vel_in_rads[MotorLocation::FRONT_RIGHT] * FLOAT_TO_INT_PRECISION;
+        control_items.present_velocity[MotorLocation::REAR_LEFT] =
+            vel_in_rads[MotorLocation::REAR_LEFT] * FLOAT_TO_INT_PRECISION;
+        control_items.present_velocity[MotorLocation::REAR_RIGHT] =
+            vel_in_rads[MotorLocation::REAR_RIGHT] * FLOAT_TO_INT_PRECISION;
+      }
+      if (motor_driver.read_present_current(current_fl, current_fr, current_rl, current_rr) == true)
       {
         control_items.present_current[MotorLocation::FRONT_LEFT] = 100 * current_fl;
         control_items.present_current[MotorLocation::FRONT_RIGHT] = 100 * current_fr;
@@ -535,21 +550,29 @@ static void dxl_slave_write_callback_func(uint16_t item_addr, uint8_t& dxl_err_c
 
     case ADDR_CMD_VEL_FRONT_LEFT:
       goal_velocity[MotorLocation::FRONT_LEFT] =
-          constrain((float)(control_items.cmd_vel_rot[MotorLocation::FRONT_LEFT]) * 1e-4, -max_rot_vel, max_rot_vel);
+          constrain((float)(control_items.cmd_vel_rot[MotorLocation::FRONT_LEFT]) * INT_TO_FLOAT_PRECISION,
+                    -max_rot_vel,
+                    max_rot_vel);
       break;
 
     case ADDR_CMD_VEL_FRONT_RIGHT:
       goal_velocity[MotorLocation::FRONT_RIGHT] =
-          constrain((float)(control_items.cmd_vel_rot[MotorLocation::FRONT_RIGHT]) * 1e-4, -max_rot_vel, max_rot_vel);
+          constrain((float)(control_items.cmd_vel_rot[MotorLocation::FRONT_RIGHT]) * INT_TO_FLOAT_PRECISION,
+                    -max_rot_vel,
+                    max_rot_vel);
       break;
     case ADDR_CMD_VEL_REAR_LEFT:
       goal_velocity[MotorLocation::REAR_LEFT] =
-          constrain((float)(control_items.cmd_vel_rot[MotorLocation::REAR_LEFT]) * 1e-4, -max_rot_vel, max_rot_vel);
+          constrain((float)(control_items.cmd_vel_rot[MotorLocation::REAR_LEFT]) * INT_TO_FLOAT_PRECISION,
+                    -max_rot_vel,
+                    max_rot_vel);
       break;
 
     case ADDR_CMD_VEL_REAR_RIGHT:
       goal_velocity[MotorLocation::REAR_RIGHT] =
-          constrain((float)(control_items.cmd_vel_rot[MotorLocation::REAR_RIGHT]) * 1e-4, -max_rot_vel, max_rot_vel);
+          constrain((float)(control_items.cmd_vel_rot[MotorLocation::REAR_RIGHT]) * INT_TO_FLOAT_PRECISION,
+                    -max_rot_vel,
+                    max_rot_vel);
       break;
 
     case ADDR_PROFILE_ACC_FL:

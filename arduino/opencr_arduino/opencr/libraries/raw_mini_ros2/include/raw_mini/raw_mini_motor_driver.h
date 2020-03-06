@@ -48,10 +48,10 @@ public:
                              int32_t& front_right_value,
                              int32_t& rear_left_value,
                              int32_t& rear_right_value);
-  bool read_present_velocity(int32_t& front_left_value,
-                             int32_t& front_right_value,
-                             int32_t& rear_left_value,
-                             int32_t& rear_right_value);
+  bool read_present_velocity(float& front_left_value,
+                             float& front_right_value,
+                             float& rear_left_value,
+                             float& rear_right_value);
   bool read_present_current(int16_t& front_left_value,
                             int16_t& front_right_value,
                             int16_t& rear_left_value,
